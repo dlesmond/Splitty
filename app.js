@@ -792,6 +792,7 @@
   let unsubscribeGroup = null;
 
   function setFieldsLocked(lock){
+    document.body.classList.toggle('locked', lock);
     $$("input, button, select, textarea").forEach(el => {
       if (el.id === 'loginBtn') return;
       if (el.closest('#authModal')) return;
