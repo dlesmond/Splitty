@@ -209,7 +209,8 @@ details summary{
   .card{padding:14px}
   h1{font-size:24px}
   h2{font-size:18px}
-  .row{grid-template-columns:1fr}
+  .row{grid-template-columns:repeat(12,1fr)}
+  .row > [class^="col-"]{grid-column:span 12}
   #expensesTable th.split-amts, #expensesTable td.split-amts{width:auto}
   #expensesTable th.split-rule, #expensesTable td.split-rule{width:auto}
 }
