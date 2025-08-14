@@ -46,8 +46,6 @@ h1{font-size:28px}
 h2{font-size:20px;color:var(--muted);font-weight:600}
 
 .wrap{max-width:1400px;margin:28px auto;padding:0 16px}
-body.locked .wrap{filter:blur(4px);pointer-events:none}
-body.locked #authModal{filter:none;pointer-events:auto}
 .grid{display:grid;gap:16px;grid-template-columns:1.4fr .8fr}
 @media (max-width:1200px){.wrap{max-width:98vw}.grid{grid-template-columns:1fr}}
 
