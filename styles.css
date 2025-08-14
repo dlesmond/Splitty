@@ -48,8 +48,13 @@ h2{font-size:20px;color:var(--muted);font-weight:600}
 .wrap{max-width:1400px;margin:28px auto;padding:0 16px}
 body.locked .wrap{filter:blur(4px);pointer-events:none}
 body.locked #authModal{filter:none;pointer-events:auto}
-.grid{display:grid;gap:16px;grid-template-columns:1.4fr .8fr}
+.grid{display:grid;gap:16px;grid-template-columns:220px 1.4fr .8fr}
 @media (max-width:1200px){.wrap{max-width:98vw}.grid{grid-template-columns:1fr}}
+#groupNav{width:220px}
+#groupNav ul{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:8px}
+#groupNav li button{width:100%;text-align:left}
+#groupNav li button.active{color:var(--accent)}
+@media (max-width:1200px){#groupNav{width:auto}}
 
 .card{
   background:var(--card);
