@@ -48,10 +48,8 @@
         </h2>
 
         <div class="row">
-          <div class="col-6"><label>Name</label><input id="personName" placeholder="e.g. Alex" autocomplete="off" /></div>
-          <div class="col-3"><label>&nbsp;</label><button class="btn-accent" id="addPerson">Add person</button></div>
-          <div class="col-3 right"><label>&nbsp;</label>
-            <button class="btn-ghost" id="themeToggle" title="Switch theme">☀️ Light</button>
+          <div class="col-12 right">
+            <button class="btn-ghost" id="userBtn" title="Manage users">👤</button>
             <button class="btn-ghost" id="loginBtn" type="button">Sign in</button>
             <button class="btn-ghost" id="logoutBtn" type="button" style="display:none">Sign out</button>
           </div>
@@ -180,8 +178,23 @@
         </button>
       </div>
     </form>
-  </div>
 </div>
+</div>
+
+  <!-- User Modal -->
+  <div id="userModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="userTitle">
+    <div class="modal-card">
+      <h3 id="userTitle">Users</h3>
+      <div id="userList" class="small" style="margin-bottom:10px"></div>
+      <div class="row">
+        <div class="col-8"><input id="userName" placeholder="e.g. Alex" autocomplete="off" /></div>
+        <div class="col-4 right"><button class="btn-accent" id="userAdd">Add</button></div>
+      </div>
+      <div class="right" style="margin-top:10px">
+        <button class="btn-ghost" id="userClose">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Settle Up Modal -->
   <div id="settleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settleTitle">

@@ -185,7 +185,7 @@
     const payer = $('#payer');
     if (payer) payer.innerHTML = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
     const list = $('#peopleList');
-    if (list) list.textContent = state.people.length ? `People: ${state.people.join(', ')}` : 'No people yet — add some above.';
+    if (list) list.textContent = state.people.length ? `People: ${state.people.join(', ')}` : 'No people yet — add via the user menu.';
 
     const last = getLastParticipants().filter(n=>state.people.includes(n));
     const inp = $('#participants');
@@ -202,14 +202,46 @@
     updateSplitUI();
   }
 
+  function renderUserList(){
+    const list = $('#userList');
+    if (!list) return;
+    if (state.people.length === 0){
+      list.textContent = 'No users yet.';
+      return;
+    }
+    list.innerHTML = state.people.map(p=>
+      `<div class="row"><div class="col-8">${p}</div><div class="col-4 right"><button class="btn-ghost user-del" data-name="${p}">✖</button></div></div>`
+    ).join('');
+    list.querySelectorAll('button.user-del').forEach(btn=>{
+      btn.addEventListener('click', ()=> removePerson(btn.dataset.name));
+    });
+  }
+
+  function openUserModal(){
+    renderUserList();
+    $('#userModal')?.classList.remove('hidden');
+  }
+
+  function closeUserModal(){
+    $('#userModal')?.classList.add('hidden');
+  }
+
   // ---------- add person / expense / settlement ----------
   function addPerson(){
-    const name = ($('#personName')?.value || '').trim();
+    const name = ($('#personName')?.value || $('#userName')?.value || '').trim();
     if(!name) return;
     if(state.people.includes(name)) return alert('That name already exists.');
     state.people.push(name);
-    $('#personName').value='';
-    save(); renderPeople();
+    if($('#personName')) $('#personName').value='';
+    if($('#userName')) $('#userName').value='';
+    save(); renderPeople(); renderUserList();
+  }
+
+  function removePerson(name){
+    if(!name) return;
+    state.people = state.people.filter(p=>p!==name);
+    state.expenses = state.expenses.filter(e=> e.payer!==name && !(e.participants||[]).includes(name));
+    save(); renderPeople(); renderExpenses(); computeBalances(); renderUserList(); updateSplitUI();
   }
 
   function addExpense(){
@@ -675,18 +707,14 @@
   // ---------- wire events ----------
   function wireEvents(){
     // People / expense
-    $('#addPerson')?.addEventListener('click', addPerson);
+    $('#userAdd')?.addEventListener('click', addPerson);
+    $('#userBtn')?.addEventListener('click', openUserModal);
+    $('#userClose')?.addEventListener('click', closeUserModal);
     $('#addExpense')?.addEventListener('click', addExpense);
 
     // Split UI
     $('#splitType')?.addEventListener('change', updateSplitUI);
     $('#participants')?.addEventListener('input', updateSplitUI);
-
-    // Theme
-    $('#themeToggle')?.addEventListener('click', ()=>{
-      const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-      applyTheme(cur==='light' ? 'dark' : 'light');
-    });
 
     // Settle modal
     $('#settleBtn')?.addEventListener('click', ()=> openSettleModal());
@@ -699,6 +727,7 @@
       });
     });
     document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSettleModal(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeUserModal(); });
 
     // Suggestions
     $('#settlements')?.addEventListener('click', (e)=>{
@@ -786,7 +815,7 @@
     // Clear in-memory + local cache (do NOT touch Firestore)
     state = { people: [], expenses: [] };
     localStorage.removeItem('spl-lite');
-    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
     // Reset some form fields for a fresh look
     const d = $('#date'); if (d) d.value = todayISO();
     setStatus('Signed out','ok');
@@ -804,7 +833,7 @@
           state.people   = Array.isArray(remote.people)   ? remote.people   : [];
           state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
           localStorage.setItem('spl-lite', JSON.stringify(state));
-          renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+          renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
           setStatus('Synced from cloud','ok');
         }, (err)=> console.error('onSnapshot', err));
 
@@ -830,10 +859,10 @@
     const ok = await ensureFirebaseReady();
     if (!ok) console.warn('Firebase SDK not ready in time');
 
-    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
     // Wait for auth state before locking the interface
     setFieldsLocked(false);
-    applyTheme(localStorage.getItem('spl-theme')||'dark');
+    applyTheme('dark');
     if ($('#saveStatus')) markSaved();
 
     wireEvents();
