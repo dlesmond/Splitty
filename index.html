@@ -36,6 +36,12 @@
     <h1>Splitty <span class="pill"><span>Cloud Sync</span></span></h1>
 
     <div class="grid">
+      <aside id="groupNav" class="card">
+        <h2>Groups</h2>
+        <ul id="groupList"></ul>
+        <button id="newGroup" class="btn-accent">New group</button>
+      </aside>
+
       <!-- LEFT: People + Add Expense + Expenses -->
       <div class="card">
         <h2>
@@ -46,6 +52,11 @@
             <span>Saved • just now</span>
           </span>
         </h2>
+
+        <div id="groupBar" class="flex" style="gap:8px; margin:8px 0; align-items:center;">
+          <div id="groupList" class="flex" style="gap:6px; flex:1;"></div>
+          <button class="btn-ghost" id="newGroupBtn" type="button">New group</button>
+        </div>
 
         <div class="row">
           <div class="col-6"><label>Name</label><input id="personName" placeholder="e.g. Alex" autocomplete="off" /></div>
