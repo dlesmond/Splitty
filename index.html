@@ -69,7 +69,13 @@
           <div class="col-8"><label>Description</label><input id="desc" placeholder="e.g. Groceries" autocomplete="off" /></div>
 
           <!-- Negative amounts allowed -->
-          <div class="col-4"><label>Amount</label><input type="number" id="amount" step="0.01" /></div>
+          <div class="col-4">
+            <label>Amount</label>
+            <div class="currency-input">
+              <span class="currency-symbol">$</span>
+              <input type="number" id="amount" step="0.01" />
+            </div>
+          </div>
 
           <div class="col-4"><label>Payer</label><select id="payer"></select></div>
           <div class="col-4"><label>Split</label>
@@ -184,7 +190,13 @@
       <div class="row">
         <div class="col-6"><label>From (payer)</label><select id="settleFrom"></select></div>
         <div class="col-6"><label>To (recipient)</label><select id="settleTo"></select></div>
-        <div class="col-6"><label>Amount</label><input type="number" id="settleAmount" step="0.01" placeholder="0.00"/></div>
+        <div class="col-6">
+          <label>Amount</label>
+          <div class="currency-input">
+            <span class="currency-symbol">$</span>
+            <input type="number" id="settleAmount" step="0.01" placeholder="0.00"/>
+          </div>
+        </div>
         <div class="col-6"><label>Date</label><input type="date" id="settleDate"/></div>
         <div class="col-12 small muted">Meaning: <em>From pays To</em>. Can be partial. If backwards, use <strong>Swap</strong>.</div>
         <div class="col-12 small" id="settlePreview"></div>
@@ -205,7 +217,13 @@
         <div class="row">
           <div class="col-6"><label>Date</label><input type="date" id="editDate"></div>
           <div class="col-6"><label>Description</label><input id="editDesc" placeholder="e.g. Groceries"/></div>
-          <div class="col-4"><label>Amount</label><input type="number" id="editAmount" step="0.01"></div>
+          <div class="col-4">
+            <label>Amount</label>
+            <div class="currency-input">
+              <span class="currency-symbol">$</span>
+              <input type="number" id="editAmount" step="0.01">
+            </div>
+          </div>
           <div class="col-4"><label>Payer</label><select id="editPayer"></select></div>
           <div class="col-4"><label>Split</label>
             <select id="editSplitType">
@@ -223,7 +241,13 @@
         <div class="row">
           <div class="col-6"><label>From (payer)</label><select id="editFrom"></select></div>
           <div class="col-6"><label>To (recipient)</label><select id="editTo"></select></div>
-          <div class="col-6"><label>Amount</label><input type="number" id="editSettleAmount" step="0.01"></div>
+          <div class="col-6">
+            <label>Amount</label>
+            <div class="currency-input">
+              <span class="currency-symbol">$</span>
+              <input type="number" id="editSettleAmount" step="0.01">
+            </div>
+          </div>
           <div class="col-6"><label>Date</label><input type="date" id="editSettleDate"></div>
         </div>
       </div>
