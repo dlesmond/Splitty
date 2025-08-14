@@ -40,7 +40,8 @@
 
   // ---------- app state ----------
   const GROUP_ID = 'couple';
-  let state = safeJSON(localStorage.getItem('spl-lite')) ?? { people: [], expenses: [] };
+  let state = safeJSON(localStorage.getItem('spl-lite')) ?? { people: [], expenses: [], settlements: [] };
+  if (!state.settlements) state.settlements = [];
 
   // ---------- save status pill ----------
   let _saveTimer = null;
@@ -67,6 +68,7 @@
     const payload = {
       people: state.people || [],
       expenses: state.expenses || [],
+      settlements: state.settlements || [],
       members: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -135,30 +137,6 @@
 
     throw new Error('Unknown split type.');
   }
-
-  // ---------- balances math ----------
-  function calculateNet(people, expenses){
-    const paid=Object.fromEntries(people.map(p=>[p,0]));
-    const owed=Object.fromEntries(people.map(p=>[p,0]));
-    expenses.forEach(e=>{
-      if (e.splitType === 'settlement'){
-        const [from,to] = e.participants;
-        const amt = (e.shares && e.shares[to]) ? e.shares[to] : (e.amount||0);
-        paid[from] = (paid[from]||0) + amt;
-        owed[to]   = (owed[to]||0)  + amt;
-        return;
-      }
-      paid[e.payer] = (paid[e.payer]||0) + e.amount;
-      if (e.shares){
-        Object.entries(e.shares).forEach(([p,share])=>{
-          owed[p] = (owed[p]||0) + share;
-        });
-      }
-    });
-    const net = Object.fromEntries(people.map(p=>[p,(paid[p]||0)-(owed[p]||0)]));
-    return { paid, owed, net };
-  }
-
   // ---------- UI: People / chips / payer select ----------
   function renderPeople(){
     const chips = $('#chips');
@@ -241,6 +219,7 @@
     if(!name) return;
     state.people = state.people.filter(p=>p!==name);
     state.expenses = state.expenses.filter(e=> e.payer!==name && !(e.participants||[]).includes(name));
+    state.settlements = state.settlements.filter(s=> s.fromUserId!==name && s.toUserId!==name);
     save(); renderPeople(); renderExpenses(); computeBalances(); renderUserList(); updateSplitUI();
   }
 
@@ -307,13 +286,12 @@
 
   function addExactSettlement(from, to, amount, date = null, viaModal=false){
     const when = date || todayISO();
-    const desc = `Settle up: ${from} → ${to}`;
-    const participants=[from,to];
-    const shares={ [to]: amount };
-    state.expenses.push({
+    state.settlements.push({
       id: crypto.randomUUID(),
-      date: when, desc, amount, payer: from, participants, shares,
-      splitType: 'settlement', rawSplit: `${from}->${to}:${amount}`
+      fromUserId: from,
+      toUserId: to,
+      amount,
+      date: when
     });
     save(); if(viaModal) closeSettleModal(); renderExpenses(); computeBalances();
   }
@@ -331,25 +309,17 @@
   // ---------- edit / delete ----------
   let editingId = null;
 
+  let editingKind = null;
   function openEditModal(id){
     editingId = id;
-    const e = state.expenses.find(x=>x.id===id); if(!e) return;
-    $('#editTitle').textContent = e.splitType==='settlement' ? 'Edit settlement' : 'Edit expense';
-
+    const e = state.expenses.find(x=>x.id===id);
     $('#editPayer').innerHTML = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
     $('#editFrom').innerHTML  = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
     $('#editTo').innerHTML    = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
 
-    if (e.splitType === 'settlement'){
-      $('#editNormal').style.display='none';
-      $('#editSettlement').style.display='block';
-      const [from,to] = e.participants;
-      const amt = e.shares && e.shares[to] ? e.shares[to] : e.amount;
-      $('#editFrom').value = from;
-      $('#editTo').value   = to;
-      $('#editSettleAmount').value = amt;
-      $('#editSettleDate').value   = e.date || '';
-    } else {
+    if (e){
+      editingKind = 'expense';
+      $('#editTitle').textContent = 'Edit expense';
       $('#editNormal').style.display='block';
       $('#editSettlement').style.display='none';
       $('#editDate').value  = e.date || '';
@@ -360,10 +330,20 @@
       $('#editParticipants').value = (e.participants||[]).join(', ');
       $('#editSplitValues').value  = e.splitType==='equal' ? '' : (e.rawSplit||'');
       updateEditSplitUI();
+    } else {
+      const s = state.settlements.find(x=>x.id===id); if(!s) return;
+      editingKind = 'settlement';
+      $('#editTitle').textContent = 'Edit settlement';
+      $('#editNormal').style.display='none';
+      $('#editSettlement').style.display='block';
+      $('#editFrom').value = s.fromUserId;
+      $('#editTo').value   = s.toUserId;
+      $('#editSettleAmount').value = s.amount;
+      $('#editSettleDate').value   = s.date || '';
     }
     $('#editModal').classList.remove('hidden');
   }
-  function closeEditModal(){ editingId=null; $('#editModal').classList.add('hidden'); }
+  function closeEditModal(){ editingId=null; editingKind=null; $('#editModal').classList.add('hidden'); }
 
   function updateEditSplitUI(){
     const type=$('#editSplitType').value;
@@ -377,24 +357,21 @@
 
   function saveEdit(){
     if(!editingId) return;
-    const i = state.expenses.findIndex(x=>x.id===editingId);
-    if(i<0) return;
-    const cur = state.expenses[i];
-
-    if (cur.splitType==='settlement'){
+    if(editingKind === 'settlement'){
       const from=$('#editFrom').value;
       const to=$('#editTo').value;
       const amt=parseFloat($('#editSettleAmount').value);
       const date=$('#editSettleDate').value || todayISO();
       if(!from||!to||from===to) return alert('Choose two different people.');
       if(isNaN(amt) || amt<=0)  return alert('Enter a valid amount.');
-      const participants=[from,to];
-      const shares={ [to]: amt };
-      state.expenses[i] = {
-        ...cur, date, desc:`Settle up: ${from} → ${to}`, amount:amt, payer:from, participants,
-        shares, splitType:'settlement', rawSplit:`${from}->${to}:${amt}`
-      };
+      const idx = state.settlements.findIndex(x=>x.id===editingId);
+      if(idx>=0){
+        state.settlements[idx] = { ...state.settlements[idx], fromUserId:from, toUserId:to, amount:amt, date };
+      }
     } else {
+      const i = state.expenses.findIndex(x=>x.id===editingId);
+      if(i<0) return;
+      const cur = state.expenses[i];
       const date = $('#editDate').value || todayISO();
       const desc = ($('#editDesc').value || '').trim() || 'Expense';
       const amount = parseFloat($('#editAmount').value);
@@ -416,8 +393,10 @@
 
   // perform the actual deletion (kept same name)
   function deleteExpense(id){
-    const i=state.expenses.findIndex(e=>e.id===id);
-    if(i>=0){ state.expenses.splice(i,1); save(); renderExpenses(); computeBalances(); }
+    let i=state.expenses.findIndex(e=>e.id===id);
+    if(i>=0){ state.expenses.splice(i,1); save(); renderExpenses(); computeBalances(); return; }
+    i=state.settlements.findIndex(s=>s.id===id);
+    if(i>=0){ state.settlements.splice(i,1); save(); renderExpenses(); computeBalances(); }
   }
 
   // ---------- generic confirm modal (reuses your #confirmModal) ----------
@@ -507,7 +486,19 @@
     tbody.innerHTML = '';
 
     // newest → oldest
-    const items = state.expenses.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+    const items = [
+      ...state.expenses,
+      ...(state.settlements||[]).map(s=>({
+        id: s.id,
+        date: s.date,
+        desc: `Settle up: ${s.fromUserId} → ${s.toUserId}`,
+        amount: s.amount,
+        payer: s.fromUserId,
+        participants: [s.fromUserId, s.toUserId],
+        shares: { [s.toUserId]: s.amount },
+        splitType: 'settlement'
+      }))
+    ].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
 
     items.forEach(e=>{
       const tr = document.createElement('tr');
@@ -529,12 +520,13 @@
 
   // ---------- render: balances + suggestions ----------
   function computeBalances(){
-    const {net, paid, owed} = calculateNet(state.people, state.expenses);
+    const {net, paid, owed, settled} = calculateAggregates(state.people, state.expenses, state.settlements);
     const wrap = $('#balances'); if(!wrap) return;
     wrap.innerHTML='';
     state.people.forEach(p=>{
       const paidVal = paid[p]||0;
       const owesVal = owed[p]||0;
+      const setVal  = settled[p]||0;
       const n = net[p]||0;
       const card = document.createElement('div');
       card.className='balcard';
@@ -543,6 +535,8 @@
         <div class="bal-row"><span class="label">Paid</span><span class="bal-amt mono">$${currency(paidVal)}</span></div>
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Owes</span><span class="bal-amt mono">$${currency(owesVal)}</span></div>
+        <div class="bal-sep"></div>
+        <div class="bal-row"><span class="label">Settled</span><span class="bal-amt mono ${setVal>=0?'pos':'neg'}">${setVal>=0?'+':'-'}$${currency(Math.abs(setVal))}</span></div>
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Net</span><span class="bal-amt mono ${n>=0?'pos':'neg'}">${n>=0?'+':'-'}$${currency(Math.abs(n))}</span></div>
       `;
@@ -625,7 +619,7 @@
     if (!fromSel || !toSel) return;
     fromSel.innerHTML = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
     toSel.innerHTML   = state.people.map(p=>`<option value="${p}">${p}</option>`).join('');
-    const {net} = calculateNet(state.people, state.expenses);
+    const {net} = calculateAggregates(state.people, state.expenses, state.settlements);
     const debtor   = Object.entries(net).sort((a,b)=>a[1]-b[1])[0]?.[0];
     const creditor = Object.entries(net).sort((a,b)=>b[1]-a[1])[0]?.[0];
     fromSel.value = prefFrom || debtor || state.people[0] || '';
@@ -638,7 +632,7 @@
   function closeSettleModal(){ $('#settleModal')?.classList.add('hidden'); }
   function updateSettlePreview(){
     const preview = $('#settlePreview'); if(!preview) return;
-    const {net} = calculateNet(state.people, state.expenses);
+    const {net} = calculateAggregates(state.people, state.expenses, state.settlements);
     const from = $('#settleFrom')?.value; const to = $('#settleTo')?.value;
     const amt  = parseFloat($('#settleAmount')?.value || '0');
     if(!from||!to||from===to){ preview.innerHTML='<span class="muted">Choose two different people.</span>'; return; }
@@ -813,7 +807,7 @@
 
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
-    state = { people: [], expenses: [] };
+    state = { people: [], expenses: [], settlements: [] };
     localStorage.removeItem('spl-lite');
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
     // Reset some form fields for a fresh look
@@ -830,8 +824,9 @@
         if (unsubscribeGroup) unsubscribeGroup();
         unsubscribeGroup = db.collection('groups').doc(GROUP_ID).onSnapshot((doc)=>{
           const remote = doc.exists ? doc.data() : {};
-          state.people   = Array.isArray(remote.people)   ? remote.people   : [];
-          state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
+          state.people      = Array.isArray(remote.people)      ? remote.people      : [];
+          state.expenses    = Array.isArray(remote.expenses)    ? remote.expenses    : [];
+          state.settlements = Array.isArray(remote.settlements) ? remote.settlements : [];
           localStorage.setItem('spl-lite', JSON.stringify(state));
           renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
           setStatus('Synced from cloud','ok');
