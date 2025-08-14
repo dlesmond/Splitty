@@ -1,12 +1,13 @@
 /* ===== Core tokens (dark) ===== */
-:root{
-  --bg1:#0b0f17; --bg2:#0f172a; --card:#121826;
-  --muted:#8ea1b3; --text:#e8eef6; --accent:#3b82f6; --danger:#fda4af;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --hairline:rgba(255,255,255,.06);
-  --input:#0b1220; --ghost:#111827;
-  color-scheme:dark;
-}
+  :root{
+    --bg1:#0b0f17; --bg2:#0f172a; --card:#121826;
+    --muted:#8ea1b3; --text:#e8eef6; --accent:#3b82f6; --danger:#fda4af;
+    --positive:#16a34a;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --hairline:rgba(255,255,255,.06);
+    --input:#0b1220; --ghost:#111827;
+    color-scheme:dark;
+  }
 
 /* ===== Light theme base tokens (overrides) ===== */
 [data-theme="light"]{
@@ -14,7 +15,7 @@
   --text:#111827; --muted:#667085;
   --hairline:rgba(0,0,0,.08); --input:#ffffff; --ghost:#f1f5f9;
   --border:#e5e7eb;
-  --accent:#3b82f6; --accent-600:#2563eb; --accent-100:#dbeafe;
+    --accent:#3b82f6; --accent-600:#2563eb; --accent-100:#dbeafe; --positive:#16a34a;
   --chip-bg:#f2f4f7; --chip-text:#1d2939; --chip-border:#d0d5dd; --chip-active:#e8faef;
   --thead-bg:#f8fafc; --row-alt:#fafafa;
   --ghost-hover:#f3f4f6; --ghost-border:#e5e7eb;
@@ -121,7 +122,7 @@ th{text-align:left;color:#a6b8ca;font-weight:600}
 [data-theme="light"] .tag.active{background:var(--chip-active);border-color:#86efac}
 .chip-divider{width:1px;height:18px;background:var(--hairline);display:inline-block;align-self:center;margin:0 4px}
 
-.pos{color:var(--accent)}.neg{color:var(--danger)}
+.pos{color:var(--positive)}.neg{color:var(--danger)}
 .small{font-size:12px}
 .mono{font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;white-space:nowrap}
 
@@ -148,8 +149,16 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 #balances .bal-amt{font-weight:600}
 [data-theme="light"] .balcard{background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-1)}
 [data-theme="light"] .bal-amt{color:var(--text)}
-[data-theme="light"] .bal-amt.pos{color:#16a34a}
+[data-theme="light"] .bal-amt.pos{color:var(--positive)}
 [data-theme="light"] .bal-amt.neg{color:#dc2626}
+
+details summary{
+  cursor:pointer;
+  font-size:20px;
+  color:var(--muted);
+  font-weight:600;
+  margin:10px 0;
+}
 
 /* wider columns */
 #expensesTable .split-amts{white-space:nowrap}
