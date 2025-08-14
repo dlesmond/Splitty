@@ -47,7 +47,7 @@
   function setStatus(text, mode) {
     const el = $('#saveStatus');
     if (!el) return;
-    el.style.color = (mode === 'ok') ? 'var(--accent)' : '#fbbf24';
+    el.style.color = (mode === 'ok') ? 'var(--positive)' : '#fbbf24';
     const spans = el.querySelectorAll('span');
     if (spans.length) spans[spans.length - 1].textContent = text;
   }
@@ -565,44 +565,6 @@
     wrap.dataset.txns = JSON.stringify(txns);
   }
 
-  // ---------- export / import / reset ----------
-  function exportJSON(){
-    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='splitty-data.json';
-    a.click();
-  }
-  function importJSON(file){
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const data=JSON.parse(e.target.result);
-        if(!Array.isArray(data.people)||!Array.isArray(data.expenses)) throw 0;
-        state.people=data.people; state.expenses=data.expenses;
-        save(); renderPeople(); renderExpenses(); computeBalances();
-      }catch{ alert('Invalid file.'); }
-    };
-    reader.readAsText(file);
-  }
-
-  // generic confirm for reset; keeps original function name for wiring
-  async function openResetConfirm(){
-    const yes = await confirmAction({
-      title: 'Reset all data?',
-      message: 'This will remove all people and transactions. This cannot be undone.',
-      okText: 'Yes, reset',
-      cancelText: 'Cancel'
-    });
-    if (yes) doReset();
-  }
-  function doReset(){
-    state.people=[]; state.expenses=[];
-    localStorage.removeItem(LAST_KEY);
-    save(); renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
-    setStatus('Synced from cloud','ok');
-  }
-
   // ---------- split UI hints ----------
   function updateSplitUI(){
     const type = $('#splitType')?.value;
@@ -715,12 +677,6 @@
     // People / expense
     $('#addPerson')?.addEventListener('click', addPerson);
     $('#addExpense')?.addEventListener('click', addExpense);
-    $('#exportBtn')?.addEventListener('click', exportJSON);
-    $('#importBtn')?.addEventListener('click', ()=> $('#importFile')?.click());
-    $('#importFile')?.addEventListener('change', e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); });
-
-    // Reset confirm (now uses generic confirm)
-    $('#resetAll')?.addEventListener('click', openResetConfirm);
 
     // Split UI
     $('#splitType')?.addEventListener('change', updateSplitUI);

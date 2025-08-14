@@ -37,7 +37,7 @@
 
     <div class="grid">
       <!-- LEFT: People + Add Expense + Expenses -->
-      <div class="card">
+      <div class="card main-card">
         <h2>
           People
           <span id="saveStatus"
@@ -52,7 +52,6 @@
           <div class="col-3"><label>&nbsp;</label><button class="btn-accent" id="addPerson">Add person</button></div>
           <div class="col-3 right"><label>&nbsp;</label>
             <button class="btn-ghost" id="themeToggle" title="Switch theme">☀️ Light</button>
-            <button class="btn-ghost" id="resetAll" title="Clear all data">Reset</button>
             <button class="btn-ghost" id="loginBtn" type="button">Sign in</button>
             <button class="btn-ghost" id="logoutBtn" type="button" style="display:none">Sign out</button>
           </div>
@@ -99,14 +98,12 @@
           <div class="col-12 right">
             <button id="addExpense" class="btn-accent">Add expense</button>
             <button id="settleBtn">Settle up</button>
-            <span style="flex:1"></span>
-            <button id="exportBtn">Export JSON</button>
-            <input type="file" id="importFile" accept="application/json" style="display:none">
-            <button id="importBtn">Import</button>
           </div>
         </div>
 
-        <div class="scroll-expenses">
+        <details id="expensesSection">
+          <summary>Expenses</summary>
+          <div class="scroll-expenses">
           <table id="expensesTable">
             <colgroup>
               <col><col><col><col>
@@ -129,18 +126,21 @@
             </thead>
             <tbody></tbody>
           </table>
-        </div>
+          </div>
+        </details>
       </div>
 
       <!-- RIGHT: Balances + Settle Up -->
-      <div class="card">
+      <div class="card balances-card">
         <h2>Balances</h2>
         <div id="balances"></div>
         <p class="muted small">Paid/Owes include expenses + settlements. Net = Paid &minus; Owes.</p>
         <hr />
-        <h2>Suggested settle-up</h2>
-        <div id="settlements"></div>
-        <p class="muted small">Click <strong>Use</strong> to prefill the dialog, or <strong>Pay</strong> to post the exact settlement now.</p>
+        <details id="settleSection">
+          <summary>Suggested settle-up</summary>
+          <div id="settlements"></div>
+          <p class="muted small">Click <strong>Use</strong> to prefill the dialog, or <strong>Pay</strong> to post the exact settlement now.</p>
+        </details>
       </div>
     </div>
   </div>
