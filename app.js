@@ -235,6 +235,28 @@
       return alert(err.message||String(err));
     }
 
+    // If two people are splitting equally and the amount cannot be
+    // divided into exact halves (odd cent totals), give the extra cent
+    // to the non‑payer. This ensures the payer's share is rounded down
+    // and the other participant covers the rounding difference.
+    if (splitType === 'equal' && participants.length === 2) {
+      const cents = Math.round(amount * 100);
+      if (Math.abs(cents) % 2 === 1) {
+        const nonPayer = participants.find(p => p !== payer);
+        if (nonPayer && participants.includes(payer)) {
+          const absCents = Math.abs(cents);
+          let payerCents = Math.floor(absCents / 2);
+          let otherCents = absCents - payerCents;
+          if (cents < 0) {
+            payerCents = -payerCents;
+            otherCents = -otherCents;
+          }
+          shares[payer] = payerCents / 100;
+          shares[nonPayer] = otherCents / 100;
+        }
+      }
+    }
+
     state.expenses.push({
       id: crypto.randomUUID(),
       date, desc, amount, payer, participants, shares,
