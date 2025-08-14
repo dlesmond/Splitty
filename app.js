@@ -39,8 +39,10 @@
   }
 
   // ---------- app state ----------
-  const GROUP_ID = 'couple';
-  let state = safeJSON(localStorage.getItem('spl-lite')) ?? { people: [], expenses: [] };
+  let GROUP_ID = 'couple';
+  const stateKey = () => `spl-lite-${GROUP_ID}`;
+  const lastKey  = () => `spl-last-participants-${GROUP_ID}`;
+  let state = safeJSON(localStorage.getItem(stateKey())) ?? { people: [], expenses: [] };
 
   // ---------- save status pill ----------
   let _saveTimer = null;
@@ -60,7 +62,7 @@
 
   // ---------- local + cloud save ----------
   function save(){
-    localStorage.setItem('spl-lite', JSON.stringify(state));
+    localStorage.setItem(stateKey(), JSON.stringify(state));
     if (!auth || !auth.currentUser || !db) { markSaved(); return; }
     markSaving();
     const docRef = db.collection('groups').doc(GROUP_ID);
@@ -79,9 +81,8 @@
   }
 
   // ---------- last-used participants ----------
-  const LAST_KEY = 'spl-last-participants';
-  const getLastParticipants = () => (safeJSON(localStorage.getItem(LAST_KEY)) ?? []);
-  const setLastParticipants = (list) => localStorage.setItem(LAST_KEY, JSON.stringify(list||[]));
+  const getLastParticipants = () => (safeJSON(localStorage.getItem(lastKey())) ?? []);
+  const setLastParticipants = (list) => localStorage.setItem(lastKey(), JSON.stringify(list||[]));
 
   // ---------- split builder ----------
   function buildShares({amount, participants, splitType, rawVals}){
@@ -576,7 +577,7 @@
   }
   function doReset(){
     state.people=[]; state.expenses=[];
-    localStorage.removeItem(LAST_KEY);
+    localStorage.removeItem(lastKey());
     save(); renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     setStatus('Synced from cloud','ok');
   }
@@ -795,6 +796,19 @@
   // ---------- auth state / realtime sync ----------
   let unsubscribeGroup = null;
 
+  function subscribeToGroup(){
+    if (!auth || !auth.currentUser || !db) return;
+    if (unsubscribeGroup) unsubscribeGroup();
+    unsubscribeGroup = db.collection('groups').doc(GROUP_ID).onSnapshot((doc)=>{
+      const remote = doc.exists ? doc.data() : {};
+      state.people   = Array.isArray(remote.people)   ? remote.people   : [];
+      state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
+      localStorage.setItem(stateKey(), JSON.stringify(state));
+      renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+      setStatus('Synced from cloud','ok');
+    }, (err)=> console.error('onSnapshot', err));
+  }
+
   function setFieldsLocked(lock){
     document.body.classList.toggle('locked', lock);
     $$("input, button, select, textarea").forEach(el => {
@@ -807,7 +821,8 @@
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
     state = { people: [], expenses: [] };
-    localStorage.removeItem('spl-lite');
+    localStorage.removeItem(stateKey());
+    localStorage.removeItem(lastKey());
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     // Reset some form fields for a fresh look
     const d = $('#date'); if (d) d.value = todayISO();
@@ -820,16 +835,7 @@
       const loginBtn  = $('#loginBtn');
       const logoutBtn = $('#logoutBtn');
       if (user){
-        if (unsubscribeGroup) unsubscribeGroup();
-        unsubscribeGroup = db.collection('groups').doc(GROUP_ID).onSnapshot((doc)=>{
-          const remote = doc.exists ? doc.data() : {};
-          state.people   = Array.isArray(remote.people)   ? remote.people   : [];
-          state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
-          localStorage.setItem('spl-lite', JSON.stringify(state));
-          renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
-          setStatus('Synced from cloud','ok');
-        }, (err)=> console.error('onSnapshot', err));
-
+        subscribeToGroup();
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
         setFieldsLocked(false);
@@ -845,6 +851,17 @@
     });
   }
 
+  function loadGroup(id){
+    GROUP_ID = id;
+    state = safeJSON(localStorage.getItem(stateKey())) ?? { people: [], expenses: [] };
+    ['desc','amount','participants','splitValues'].forEach(id=>{ const el=$('#'+id); if(el) el.value='';});
+    const st = $('#splitType'); if (st) st.value = 'equal';
+    const dt = $('#date'); if (dt) dt.value = todayISO();
+    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    subscribeToGroup();
+  }
+  window.loadGroup = loadGroup;
+
   // ---------- boot ----------
   async function boot(){
     if (location.protocol === 'file:') { const w=$('#fileWarn'); if(w) w.style.display='block'; }
@@ -852,7 +869,7 @@
     const ok = await ensureFirebaseReady();
     if (!ok) console.warn('Firebase SDK not ready in time');
 
-    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    loadGroup(GROUP_ID);
     // Wait for auth state before locking the interface
     setFieldsLocked(false);
     applyTheme(localStorage.getItem('spl-theme')||'dark');
