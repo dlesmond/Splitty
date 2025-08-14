@@ -38,23 +38,17 @@
     <div class="grid">
       <!-- LEFT: People + Add Expense + Expenses -->
       <div class="card main-card">
-        <h2>
-          People
-          <span id="saveStatus"
-                class="save-pill">
-            <span class="dot"></span>
-            <span>Saved • just now</span>
-          </span>
-        </h2>
-
         <div class="row">
           <div class="col-12 right">
-            <button class="btn-ghost" id="userBtn" title="Manage users">👤</button>
+            <span id="saveStatus" class="save-pill">
+              <span class="dot"></span>
+              <span>Saved • just now</span>
+            </span>
+            <button class="btn-ghost" id="userBtn" type="button">Users</button>
             <button class="btn-ghost" id="loginBtn" type="button">Sign in</button>
             <button class="btn-ghost" id="logoutBtn" type="button" style="display:none">Sign out</button>
           </div>
         </div>
-        <div id="peopleList" class="small muted" style="margin-top:8px"></div>
         <hr />
 
         <h2>Add expense</h2>
