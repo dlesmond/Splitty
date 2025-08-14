@@ -645,6 +645,8 @@
       const email= $('#authEmail');
       if (btn){ btn.disabled=false; btn.dataset.loading='false'; btn.textContent='Sign in'; }
       modal.classList.remove('hidden');
+      const cancel = $('#authCancel');
+      if (cancel) cancel.hidden = document.body.classList.contains('locked');
       setTimeout(()=> email?.focus(), 0);
       return;
     }
@@ -783,7 +785,9 @@
       });
 
       document.getElementById('authCancel')?.addEventListener('click', () => {
-        document.getElementById('authModal')?.classList.add('hidden');
+        if (!document.body.classList.contains('locked')) {
+          document.getElementById('authModal')?.classList.add('hidden');
+        }
       });
     }
   } // end wireEvents
