@@ -1,0 +1,5 @@
+# build/artifacts (if you add tooling later)
+node_modules/
+dist/
+build/
+.DS_Store

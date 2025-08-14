@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Splitty v1</title>
+  
+  <!-- Firebase compat SDKs -->
+<script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- init Firebase BEFORE app.js -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCk5BXVN51kMleIjjHIhMvJVViDnk4WAgo",
+    authDomain: "splitty-c4ba4.firebaseapp.com",
+    projectId: "splitty-c4ba4",
+    storageBucket: "splitty-c4ba4.firebasestorage.app",
+    messagingSenderId: "160510593981",
+    appId: "1:160510593981:web:2734bda058ea2822bea0d4",
+    measurementId: "G-SNY2QQPNGL"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+<link rel="stylesheet" href="/styles.css">
+
+<!-- Load app.js ONCE -->
+<script defer src="/app.js"></script>
+  
+</head>
+<body>
+  <div class="wrap">
+    <h1>Splitty <span class="pill"><span>Cloud Sync</span></span></h1>
+
+    <div class="grid">
+      <!-- LEFT: People + Add Expense + Expenses -->
+      <div class="card">
+        <h2>
+          People
+          <span id="saveStatus"
+                class="save-pill">
+            <span class="dot"></span>
+            <span>Saved • just now</span>
+          </span>
+        </h2>
+
+        <div class="row">
+          <div class="col-6"><label>Name</label><input id="personName" placeholder="e.g. Alex" autocomplete="off" /></div>
+          <div class="col-3"><label>&nbsp;</label><button class="btn-accent" id="addPerson">Add person</button></div>
+          <div class="col-3 right"><label>&nbsp;</label>
+            <button class="btn-ghost" id="themeToggle" title="Switch theme">☀️ Light</button>
+            <button class="btn-ghost" id="resetAll" title="Clear all data">Reset</button>
+            <button class="btn-ghost" id="loginBtn" type="button">Sign in</button>
+            <button class="btn-ghost" id="logoutBtn" type="button" style="display:none">Sign out</button>
+          </div>
+        </div>
+        <div id="peopleList" class="small muted" style="margin-top:8px"></div>
+        <hr />
+
+        <h2>Add expense</h2>
+        <div class="row">
+          <div class="col-4">
+            <label>Date</label>
+            <input type="date" id="date" autocomplete="off" />
+          </div>
+          <div class="col-8"><label>Description</label><input id="desc" placeholder="e.g. Groceries" autocomplete="off" /></div>
+
+          <!-- Negative amounts allowed -->
+          <div class="col-4"><label>Amount</label><input type="number" id="amount" step="0.01" /></div>
+
+          <div class="col-4"><label>Payer</label><select id="payer"></select></div>
+          <div class="col-4"><label>Split</label>
+            <select id="splitType">
+              <option value="equal">Equal</option>
+              <option value="percent">Percent (comma list)</option>
+              <option value="shares">Shares (comma list)</option>
+              <option value="exact">Exact (comma list)</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label>Participants</label>
+            <input id="participants" name="participants" placeholder="Choose below or type comma-separated names" autocomplete="off" />
+            <div id="chips" class="flex" style="margin-top:6px"></div>
+          </div>
+          <div class="col-12" id="splitValuesRow" style="display:none">
+            <label id="splitValuesLabel">Split values</label>
+            <input id="splitValues" placeholder="Percent: 50,25,r  ·  Shares: 2,1,1  ·  Exact: 34.20,10,r" autocomplete="off" />
+            <div class="small muted" id="splitValuesHint"></div>
+          </div>
+          <div class="col-12 right">
+            <button id="addExpense" class="btn-accent">Add expense</button>
+            <button id="settleBtn">Settle up</button>
+            <span style="flex:1"></span>
+            <button id="exportBtn">Export JSON</button>
+            <input type="file" id="importFile" accept="application/json" style="display:none">
+            <button id="importBtn">Import</button>
+          </div>
+        </div>
+
+        <div class="scroll-expenses">
+          <table id="expensesTable">
+            <colgroup>
+              <col><col><col><col>
+              <col style="width:10%">
+              <col class="split-rule">
+              <col class="split-amts">
+              <col style="width:76px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th class="mono">Payer</th>
+                <th class="mono">Participants</th>
+                <th>Amount</th>
+                <th class="mono split-rule">Split rule</th>
+                <th class="mono split-amts">Split amounts</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT: Balances + Settle Up -->
+      <div class="card">
+        <h2>Balances</h2>
+        <div id="balances"></div>
+        <p class="muted small">Paid/Owes include expenses + settlements. Net = Paid &minus; Owes.</p>
+        <hr />
+        <h2>Suggested settle-up</h2>
+        <div id="settlements"></div>
+        <p class="muted small">Greedy minimization across creditors/debtors. Click <strong>Use</strong> to prefill the dialog, or <strong>Pay</strong> to post the exact settlement now.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign-in Modal -->
+<div id="authModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="modal-card">
+    <h3 id="authTitle">Sign in</h3>
+    <form id="authForm" autocomplete="on" novalidate>
+      <div class="row">
+        <div class="col-12">
+          <label for="authEmail">Email</label>
+          <input id="authEmail"
+                 name="email"
+                 type="email"
+                 inputmode="email"
+                 autocomplete="username email"
+                 placeholder="you@example.com"
+                 required />
+        </div>
+        <div class="col-12">
+          <label for="authPassword">Password</label>
+          <input id="authPassword"
+                 name="password"
+                 type="password"
+                 autocomplete="current-password"
+                 placeholder="••••••••"
+                 required />
+        </div>
+        <div class="col-12 small muted">Tip: Chrome can save this as a password.</div>
+      </div>
+      <div class="right" style="margin-top:10px">
+        <button type="button" class="btn-ghost" id="authCancel">Cancel</button>
+        <button type="submit" class="btn-accent" id="authSubmit">
+          <span class="spinner hidden" id="authSpinner"></span>
+          <span id="authBtnText">Sign in</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- Settle Up Modal -->
+  <div id="settleModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settleTitle">
+    <div class="modal-card">
+      <h3 id="settleTitle">Settle up</h3>
+      <div class="row">
+        <div class="col-6"><label>From (payer)</label><select id="settleFrom"></select></div>
+        <div class="col-6"><label>To (recipient)</label><select id="settleTo"></select></div>
+        <div class="col-6"><label>Amount</label><input type="number" id="settleAmount" step="0.01" placeholder="0.00"/></div>
+        <div class="col-6"><label>Date</label><input type="date" id="settleDate"/></div>
+        <div class="col-12 small muted">Meaning: <em>From pays To</em>. Can be partial. If backwards, use <strong>Swap</strong>.</div>
+        <div class="col-12 small" id="settlePreview"></div>
+      </div>
+      <div class="right" style="margin-top:10px">
+        <button id="settleSwap" class="btn-ghost">Swap</button>
+        <button id="settleCancel" class="btn-ghost">Cancel</button>
+        <button id="settleSave" class="btn-accent">Save payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="modal-card">
+      <h3 id="editTitle">Edit entry</h3>
+      <div id="editNormal">
+        <div class="row">
+          <div class="col-6"><label>Date</label><input type="date" id="editDate"></div>
+          <div class="col-6"><label>Description</label><input id="editDesc" placeholder="e.g. Groceries"/></div>
+          <div class="col-4"><label>Amount</label><input type="number" id="editAmount" step="0.01"></div>
+          <div class="col-4"><label>Payer</label><select id="editPayer"></select></div>
+          <div class="col-4"><label>Split</label>
+            <select id="editSplitType">
+              <option value="equal">Equal</option>
+              <option value="percent">Percent</option>
+              <option value="shares">Shares</option>
+              <option value="exact">Exact</option>
+            </select>
+          </div>
+          <div class="col-12"><label>Participants</label><input id="editParticipants" placeholder="Comma-separated names"></div>
+          <div class="col-12" id="editSplitRow"><label id="editSplitLabel">Split values</label><input id="editSplitValues" placeholder="e.g. 50,25,r / 2,1,1 / 20, r"><div class="small muted" id="editSplitHint"></div></div>
+        </div>
+      </div>
+      <div id="editSettlement" style="display:none">
+        <div class="row">
+          <div class="col-6"><label>From (payer)</label><select id="editFrom"></select></div>
+          <div class="col-6"><label>To (recipient)</label><select id="editTo"></select></div>
+          <div class="col-6"><label>Amount</label><input type="number" id="editSettleAmount" step="0.01"></div>
+          <div class="col-6"><label>Date</label><input type="date" id="editSettleDate"></div>
+        </div>
+      </div>
+      <div class="right" style="margin-top:10px">
+        <button id="editCancel" class="btn-ghost">Cancel</button>
+        <button id="editSave" class="btn-accent">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-card">
+      <h3 id="confirmTitle">Reset all data?</h3>
+      <p class="small muted">This will remove all people and transactions. This cannot be undone.</p>
+      <div class="right" style="margin-top:10px">
+        <button id="confirmCancel" class="btn-ghost">Cancel</button>
+        <button id="confirmOk" class="btn-accent">Yes, reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fileWarn">Tip: for Firebase sign-in, open this file via http://localhost or your Hosting URL (not file://)</div>
+</body>
+</html>
