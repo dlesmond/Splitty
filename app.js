@@ -797,7 +797,6 @@
 
   function setFieldsLocked(lock){
     document.body.classList.toggle('locked', lock);
-    if (lock) openAuthModal(); else closeAuthModal();
     $$("input, button, select, textarea").forEach(el => {
       if (el.id === 'loginBtn') return;
       if (el.closest('#authModal')) return;
