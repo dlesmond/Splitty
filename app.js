@@ -153,9 +153,8 @@
   }
 
   // ---------- last-used participants ----------
-  const LAST_KEY = 'spl-last-participants';
-  const getLastParticipants = () => (safeJSON(localStorage.getItem(LAST_KEY)) ?? []);
-  const setLastParticipants = (list) => localStorage.setItem(LAST_KEY, JSON.stringify(list||[]));
+  const getLastParticipants = () => (safeJSON(localStorage.getItem(lastKey())) ?? []);
+  const setLastParticipants = (list) => localStorage.setItem(lastKey(), JSON.stringify(list||[]));
 
   // ---------- split builder ----------
   function buildShares({amount, participants, splitType, rawVals}){
@@ -650,7 +649,7 @@
   }
   function doReset(){
     state.people=[]; state.expenses=[];
-    localStorage.removeItem(LAST_KEY);
+    localStorage.removeItem(lastKey());
     save(); renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     setStatus('Synced from cloud','ok');
   }
@@ -880,16 +879,13 @@
   let unsubscribeGroup = null;
 
   function subscribeToGroup(){
-    if (!auth || !db || !auth.currentUser) return;
+
     if (unsubscribeGroup) unsubscribeGroup();
     unsubscribeGroup = db.collection('groups').doc(GROUP_ID).onSnapshot((doc)=>{
       const remote = doc.exists ? doc.data() : {};
       state.people   = Array.isArray(remote.people)   ? remote.people   : [];
       state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
-      localStorage.setItem(`spl-lite-${GROUP_ID}`, JSON.stringify(state));
-      renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
-      setStatus('Synced from cloud','ok');
-      renderGroups();
+
     }, (err)=> console.error('onSnapshot', err));
   }
 
@@ -906,7 +902,7 @@
     // Clear in-memory + local cache (do NOT touch Firestore)
     const key = stateKey();
     state = { people: [], expenses: [] };
-    
+
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     renderGroups();
     // Reset some form fields for a fresh look
@@ -938,7 +934,6 @@
       const logoutBtn = $('#logoutBtn');
       if (user){
 
-
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
         setFieldsLocked(false);
@@ -958,7 +953,7 @@
     });
   }
 
-  // expose for manual group switching (e.g. from console)
+
   window.loadGroup = loadGroup;
 
   // ---------- boot ----------
@@ -968,8 +963,7 @@
     const ok = await ensureFirebaseReady();
     if (!ok) console.warn('Firebase SDK not ready in time');
 
-    renderGroups();
-    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+
     // Wait for auth state before locking the interface
     setFieldsLocked(false);
     applyTheme(localStorage.getItem('spl-theme')||'dark');
