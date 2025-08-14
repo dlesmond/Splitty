@@ -840,6 +840,7 @@
         if (logoutBtn) logoutBtn.style.display = 'none';
         clearUIOnSignOut();
         setFieldsLocked(true);
+        openAuthModal();
       }
     });
   }
@@ -852,7 +853,8 @@
     if (!ok) console.warn('Firebase SDK not ready in time');
 
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
-    setFieldsLocked(true);
+    // Wait for auth state before locking the interface
+    setFieldsLocked(false);
     applyTheme(localStorage.getItem('spl-theme')||'dark');
     if ($('#saveStatus')) markSaved();
 
