@@ -645,6 +645,8 @@
       const email= $('#authEmail');
       if (btn){ btn.disabled=false; btn.dataset.loading='false'; btn.textContent='Sign in'; }
       modal.classList.remove('hidden');
+      const cancel = $('#authCancel');
+      if (cancel) cancel.hidden = document.body.classList.contains('locked');
       setTimeout(()=> email?.focus(), 0);
       return;
     }
@@ -783,7 +785,9 @@
       });
 
       document.getElementById('authCancel')?.addEventListener('click', () => {
-        document.getElementById('authModal')?.classList.add('hidden');
+        if (!document.body.classList.contains('locked')) {
+          document.getElementById('authModal')?.classList.add('hidden');
+        }
       });
     }
   } // end wireEvents
@@ -792,6 +796,8 @@
   let unsubscribeGroup = null;
 
   function setFieldsLocked(lock){
+    document.body.classList.toggle('locked', lock);
+    if (lock) openAuthModal(); else closeAuthModal();
     $$("input, button, select, textarea").forEach(el => {
       if (el.id === 'loginBtn') return;
       if (el.closest('#authModal')) return;
