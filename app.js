@@ -791,6 +791,14 @@
   // ---------- auth state / realtime sync ----------
   let unsubscribeGroup = null;
 
+  function setFieldsLocked(lock){
+    $$("input, button, select, textarea").forEach(el => {
+      if (el.id === 'loginBtn') return;
+      if (el.closest('#authModal')) return;
+      el.disabled = lock;
+    });
+  }
+
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
     state = { people: [], expenses: [] };
@@ -819,12 +827,14 @@
 
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        setFieldsLocked(false);
       } else {
         if (unsubscribeGroup) unsubscribeGroup();
         unsubscribeGroup = null;
         if (loginBtn)  loginBtn.style.display  = 'inline-block';
         if (logoutBtn) logoutBtn.style.display = 'none';
         clearUIOnSignOut();
+        setFieldsLocked(true);
       }
     });
   }
@@ -837,6 +847,7 @@
     if (!ok) console.warn('Firebase SDK not ready in time');
 
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    setFieldsLocked(true);
     applyTheme(localStorage.getItem('spl-theme')||'dark');
     if ($('#saveStatus')) markSaved();
 
