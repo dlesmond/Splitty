@@ -54,11 +54,54 @@
     _saveTimer = setTimeout(()=> setStatus('Saved','ok'), 4000);
   }
 
+  // ---------- group helpers ----------
+  function renderGroups(){
+    const list = $('#groupList');
+    if (!list) return;
+    list.innerHTML = '';
+    groups.forEach(g => {
+      const btn = document.createElement('button');
+      btn.textContent = g.name || 'Group';
+      btn.className = 'group-item' + (g.id === currentGroupId ? ' active' : '');
+      btn.onclick = () => selectGroup(g.id);
+      list.appendChild(btn);
+    });
+  }
+
+  function selectGroup(groupId){
+    if (unsubscribeGroup) unsubscribeGroup();
+    currentGroupId = groupId;
+    localStorage.setItem('spl-group-id', groupId);
+    renderGroups();
+    if (!db || !auth || !auth.currentUser) return;
+    unsubscribeGroup = db.collection('groups').doc(groupId).onSnapshot((doc)=>{
+      const remote = doc.exists ? doc.data() : {};
+      state.people   = Array.isArray(remote.people)   ? remote.people   : [];
+      state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
+      localStorage.setItem('spl-lite', JSON.stringify(state));
+      renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+      setStatus('Synced from cloud','ok');
+    }, (err)=> console.error('onSnapshot', err));
+  }
+
+  async function createGroup(name){
+    if (!auth || !auth.currentUser || !db) return null;
+    const ref = db.collection('groups').doc();
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    await ref.set({
+      name: name || 'New Group',
+      people: [],
+      expenses: [],
+      members: [auth.currentUser.uid],
+      createdAt: now,
+      updatedAt: now
+    });
+    return ref.id;
+  }
+
   // ---------- local + cloud save ----------
   function save(){
 
-    markSaving();
-    const docRef = db.collection('groups').doc(groupId);
     const payload = {
       people: state.people || [],
       expenses: state.expenses || [],
@@ -722,6 +765,14 @@
   // ---------- wire events ----------
   function wireEvents(){
     // People / expense
+    $('#newGroupBtn')?.addEventListener('click', async ()=>{
+      const name = prompt('Group name?');
+      if (!name) return;
+      const id = await createGroup(name);
+      groups.push({ id, name });
+      selectGroup(id);
+      save();
+    });
     $('#addPerson')?.addEventListener('click', addPerson);
     $('#addExpense')?.addEventListener('click', addExpense);
     $('#exportBtn')?.addEventListener('click', exportJSON);
@@ -857,6 +908,7 @@
     state = { people: [], expenses: [] };
     
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    renderGroups();
     // Reset some form fields for a fresh look
     const d = $('#date'); if (d) d.value = todayISO();
     setStatus('Signed out','ok');
@@ -881,10 +933,11 @@
 
   function handleAuth(){
     if (!auth || !db) return;
-    auth.onAuthStateChanged((user)=>{
+    auth.onAuthStateChanged(async (user)=>{
       const loginBtn  = $('#loginBtn');
       const logoutBtn = $('#logoutBtn');
       if (user){
+
 
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
@@ -892,6 +945,10 @@
       } else {
         if (unsubscribeGroup) unsubscribeGroup();
         unsubscribeGroup = null;
+        groups = [];
+        currentGroupId = null;
+        localStorage.removeItem('spl-group-id');
+        renderGroups();
         if (loginBtn)  loginBtn.style.display  = 'inline-block';
         if (logoutBtn) logoutBtn.style.display = 'none';
         clearUIOnSignOut();

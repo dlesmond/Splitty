@@ -210,3 +210,15 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 
 /* file:// warning */
 #fileWarn{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:10px;background:#f59e0b;color:#0b0f17;padding:8px 12px;border-radius:10px;font-size:12px;box-shadow:var(--shadow);z-index:100}
+
+/* group list */
+#groupBar .group-item{
+  padding:4px 8px;
+  border-radius:8px;
+  background:var(--ghost);
+  cursor:pointer;
+}
+#groupBar .group-item.active{
+  background:var(--accent);
+  color:#fff;
+}
