@@ -38,12 +38,6 @@
     return true;
   }
 
-  // ---------- app state ----------
-  const ACTIVE_GROUP_KEY = 'spl-active-group';
-  let groupId = localStorage.getItem(ACTIVE_GROUP_KEY) || null;
-  function stateKey(){ return groupId ? `spl-lite-${groupId}` : 'spl-lite'; }
-  let state = safeJSON(localStorage.getItem(stateKey())) ?? { people: [], expenses: [] };
-
   // ---------- save status pill ----------
   let _saveTimer = null;
   function setStatus(text, mode) {
@@ -62,8 +56,7 @@
 
   // ---------- local + cloud save ----------
   function save(){
-    localStorage.setItem(stateKey(), JSON.stringify(state));
-    if (!auth || !auth.currentUser || !db || !groupId) { markSaved(); return; }
+
     markSaving();
     const docRef = db.collection('groups').doc(groupId);
     const payload = {
@@ -78,6 +71,42 @@
         console.error('save->firestore', err);
         setStatus('Sync failed','sync');
       });
+  }
+
+  function renderGroups(){
+    const list = document.getElementById('groupList');
+    if (!list) return;
+    list.innerHTML = '';
+    groups.forEach(id => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.textContent = id;
+      if (id === GROUP_ID) btn.classList.add('active');
+      btn.addEventListener('click', () => switchGroup(id));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function switchGroup(id){
+    if (GROUP_ID === id) return;
+    GROUP_ID = id;
+    localStorage.setItem('spl-group', GROUP_ID);
+    state = safeJSON(localStorage.getItem(`spl-lite-${GROUP_ID}`)) ?? { people: [], expenses: [] };
+    renderGroups();
+    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    renderGroups();
+    subscribeToGroup();
+  }
+
+  function addGroup(){
+    const name = prompt('Group name?');
+    if (!name) return;
+    if (!groups.includes(name)){
+      groups.push(name);
+      localStorage.setItem('spl-groups', JSON.stringify(groups));
+    }
+    switchGroup(name);
   }
 
   // ---------- last-used participants ----------
@@ -699,6 +728,8 @@
     $('#importBtn')?.addEventListener('click', ()=> $('#importFile')?.click());
     $('#importFile')?.addEventListener('change', e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); });
 
+    $('#newGroup')?.addEventListener('click', addGroup);
+
     // Reset confirm (now uses generic confirm)
     $('#resetAll')?.addEventListener('click', openResetConfirm);
 
@@ -797,6 +828,20 @@
   // ---------- auth state / realtime sync ----------
   let unsubscribeGroup = null;
 
+  function subscribeToGroup(){
+    if (!auth || !db || !auth.currentUser) return;
+    if (unsubscribeGroup) unsubscribeGroup();
+    unsubscribeGroup = db.collection('groups').doc(GROUP_ID).onSnapshot((doc)=>{
+      const remote = doc.exists ? doc.data() : {};
+      state.people   = Array.isArray(remote.people)   ? remote.people   : [];
+      state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
+      localStorage.setItem(`spl-lite-${GROUP_ID}`, JSON.stringify(state));
+      renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+      setStatus('Synced from cloud','ok');
+      renderGroups();
+    }, (err)=> console.error('onSnapshot', err));
+  }
+
   function setFieldsLocked(lock){
     document.body.classList.toggle('locked', lock);
     $$("input, button, select, textarea").forEach(el => {
@@ -810,9 +855,7 @@
     // Clear in-memory + local cache (do NOT touch Firestore)
     const key = stateKey();
     state = { people: [], expenses: [] };
-    localStorage.removeItem(key);
-    localStorage.removeItem(ACTIVE_GROUP_KEY);
-    groupId = null;
+    
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     // Reset some form fields for a fresh look
     const d = $('#date'); if (d) d.value = todayISO();
@@ -842,8 +885,7 @@
       const loginBtn  = $('#loginBtn');
       const logoutBtn = $('#logoutBtn');
       if (user){
-        const id = groupId || 'couple';
-        loadGroup(id);
+
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
         setFieldsLocked(false);
@@ -869,6 +911,7 @@
     const ok = await ensureFirebaseReady();
     if (!ok) console.warn('Firebase SDK not ready in time');
 
+    renderGroups();
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     // Wait for auth state before locking the interface
     setFieldsLocked(false);
