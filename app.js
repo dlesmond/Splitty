@@ -877,7 +877,7 @@
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     // Wait for auth state before locking the interface
     setFieldsLocked(false);
-    applyTheme(localStorage.getItem('spl-theme')||'dark');
+    applyTheme(localStorage.getItem('spl-theme')||'light');
     if ($('#saveStatus')) markSaved();
 
     wireEvents();
