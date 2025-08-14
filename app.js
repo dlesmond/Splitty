@@ -38,13 +38,6 @@
     return true;
   }
 
-  // ---------- app state ----------
-  let groups = safeJSON(localStorage.getItem('spl-groups')) ?? ['couple'];
-  let GROUP_ID = localStorage.getItem('spl-group') || groups[0];
-  let state = safeJSON(localStorage.getItem(`spl-lite-${GROUP_ID}`)) ?? { people: [], expenses: [] };
-  localStorage.setItem('spl-groups', JSON.stringify(groups));
-  localStorage.setItem('spl-group', GROUP_ID);
-
   // ---------- save status pill ----------
   let _saveTimer = null;
   function setStatus(text, mode) {
@@ -63,10 +56,9 @@
 
   // ---------- local + cloud save ----------
   function save(){
-    localStorage.setItem(`spl-lite-${GROUP_ID}`, JSON.stringify(state));
-    if (!auth || !auth.currentUser || !db) { markSaved(); return; }
+
     markSaving();
-    const docRef = db.collection('groups').doc(GROUP_ID);
+    const docRef = db.collection('groups').doc(groupId);
     const payload = {
       people: state.people || [],
       expenses: state.expenses || [],
@@ -861,12 +853,30 @@
 
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
+    const key = stateKey();
     state = { people: [], expenses: [] };
-    localStorage.removeItem(`spl-lite-${GROUP_ID}`);
+    
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
     // Reset some form fields for a fresh look
     const d = $('#date'); if (d) d.value = todayISO();
     setStatus('Signed out','ok');
+  }
+
+  async function loadGroup(id){
+    if (!db) return;
+    groupId = id;
+    localStorage.setItem(ACTIVE_GROUP_KEY, id);
+    state = safeJSON(localStorage.getItem(stateKey())) ?? { people: [], expenses: [] };
+    renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+    if (unsubscribeGroup) unsubscribeGroup();
+    unsubscribeGroup = db.collection('groups').doc(id).onSnapshot((doc)=>{
+      const remote = doc.exists ? doc.data() : {};
+      state.people   = Array.isArray(remote.people)   ? remote.people   : [];
+      state.expenses = Array.isArray(remote.expenses) ? remote.expenses : [];
+      localStorage.setItem(stateKey(), JSON.stringify(state));
+      renderPeople(); renderExpenses(); computeBalances(); updateSplitUI();
+      setStatus('Synced from cloud','ok');
+    }, (err)=> console.error('onSnapshot', err));
   }
 
   function handleAuth(){
@@ -875,7 +885,7 @@
       const loginBtn  = $('#loginBtn');
       const logoutBtn = $('#logoutBtn');
       if (user){
-        subscribeToGroup();
+
         if (loginBtn)  loginBtn.style.display  = 'none';
         if (logoutBtn) logoutBtn.style.display = 'inline-block';
         setFieldsLocked(false);
@@ -890,6 +900,9 @@
       }
     });
   }
+
+  // expose for manual group switching (e.g. from console)
+  window.loadGroup = loadGroup;
 
   // ---------- boot ----------
   async function boot(){
