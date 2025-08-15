@@ -1,9 +1,10 @@
 (function(global){
   'use strict';
   function calculateAggregates(people = [], expenses = [], settlements = []){
-    const paid    = Object.fromEntries(people.map(p => [p, 0]));
-    const owed    = Object.fromEntries(people.map(p => [p, 0]));
-    const settled = Object.fromEntries(people.map(p => [p, 0]));
+    const paid       = Object.fromEntries(people.map(p => [p, 0]));
+    const owed       = Object.fromEntries(people.map(p => [p, 0]));
+    const settledOut = Object.fromEntries(people.map(p => [p, 0]));
+    const settledIn  = Object.fromEntries(people.map(p => [p, 0]));
     expenses.forEach(e => {
       paid[e.payer] = (paid[e.payer] || 0) + (e.amount || 0);
       if (e.shares){
@@ -13,13 +14,13 @@
       }
     });
     settlements.forEach(s => {
-      settled[s.fromUserId] = (settled[s.fromUserId] || 0) + s.amount;
-      settled[s.toUserId]   = (settled[s.toUserId]   || 0) - s.amount;
+      settledOut[s.fromUserId] = (settledOut[s.fromUserId] || 0) + s.amount;
+      settledIn[s.toUserId]   = (settledIn[s.toUserId]   || 0) + s.amount;
     });
     const net = Object.fromEntries(
-      people.map(p => [p, (paid[p] || 0) - (owed[p] || 0) + (settled[p] || 0)])
+      people.map(p => [p, (paid[p] || 0) - (owed[p] || 0) + ((settledOut[p] || 0) - (settledIn[p] || 0))])
     );
-    return { paid, owed, settled, net };
+    return { paid, owed, settledOut, settledIn, net };
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { calculateAggregates };
   global.calculateAggregates = calculateAggregates;
