@@ -8,6 +8,11 @@
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const sum = (arr) => arr.reduce((a,b)=>a+b,0);
   const currency = (n) => (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  const formatDate = (s) => {
+    if(!s) return '';
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleDateString('en-GB',{day:'2-digit', month:'short', year:'numeric'});
+  };
   const parseList = (str) => (str||'').split(',').map(s=>s.trim()).filter(Boolean);
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
   function safeJSON(s){ try{ return JSON.parse(s); } catch { return null; } }
@@ -460,12 +465,18 @@
   // ---------- render: expenses (newest first) ----------
   function renderExpenses(){
     function formatRule(e){
-      if(e.splitType==='settlement') return 'settlement';
-      if(e && typeof e.rawSplit==='string' && e.rawSplit.length){ return `${e.splitType||'custom'}: ${e.rawSplit}`; }
+      const map={
+        settlement:'Settlement',
+        equal:'Equal split',
+        percent:'Percent split',
+        shares:'By shares',
+        exact:'Exact amounts'
+      };
+      if(e.splitType && map[e.splitType]) return map[e.splitType];
       if(e && e.shares && e.participants){
         const vals=e.participants.map(p=>e.shares[p]||0);
         const allEq=vals.length>0 && vals.every(v=>Math.abs(v-vals[0])<0.01);
-        return allEq? 'equal':'custom';
+        return allEq ? 'Equal split' : 'Custom split';
       }
       return '';
     }
@@ -473,19 +484,17 @@
       if(e.splitType==='settlement'){
         const [from,to]=e.participants;
         const amt = e.shares && e.shares[to] ? e.shares[to] : e.amount;
-        return `${from} → ${to}: $${currency(amt)}`;
+        return `<div class="split-line"><span>${from}</span><span>$${currency(amt)}</span></div>`;
       }
       if(e && e.shares && e.participants){
-        return e.participants.map(p=>`${p}: $${currency(e.shares[p]||0)}`).join(', ');
+        return e.participants.map(p=>`<div class="split-line"><span>${p}</span><span>$${currency(e.shares[p]||0)}</span></div>`).join('');
       }
       return '';
     }
-
     const tbody = $('#expensesTable tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // newest → oldest
     const items = [
       ...state.expenses,
       ...(state.settlements||[]).map(s=>({
@@ -500,19 +509,34 @@
       }))
     ].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
 
+    let currentMonth='';
     items.forEach(e=>{
+      const monthKey = (e.date||'').slice(0,7);
+      if(monthKey && monthKey!==currentMonth){
+        const hdr=document.createElement('tr');
+        hdr.className='month-header';
+        const d=new Date(e.date);
+        const label=isNaN(d)?monthKey:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+        hdr.innerHTML = `<td colspan="7">${label}</td>`;
+        tbody.appendChild(hdr);
+        currentMonth=monthKey;
+      }
+      const participantsHTML = e.participants.map(p=>{
+        const av=state.avatars?.[p];
+        const icon=av?`<img src="${av}" class="avatar" alt="">`:'';
+        return `<span class="participant">${icon}${p}</span>`;
+      }).join(', ');
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td data-label="Date">${e.date}</td>
+        <td class="small" data-label="Date">${formatDate(e.date)}</td>
         <td data-label="Description">${e.desc}</td>
-        <td class="mono" data-label="Payer">${e.payer}</td>
-        <td class="mono" data-label="Participants">${e.participants.join(', ')}</td>
-        <td data-label="Amount">$${currency(e.amount)}</td>
-        <td class="mono split-rule" data-label="Split rule">${formatRule(e)}</td>
-        <td class="mono split-amts" data-label="Split amounts">${formatAmounts(e)}</td>
-        <td class="right" data-label="Actions">
-          <button class="btn-ghost icon btn-edit" style="color:#f59e0b" title="Edit" data-id="${e.id}">✎</button>
-          <button class="btn-ghost icon btn-del"  style="color:#ef4444" title="Delete" data-id="${e.id}">✕</button>
+        <td data-label="People"><div>${e.payer}</div><div class="participants small muted">${participantsHTML}</div></td>
+        <td class="amount" data-label="Amount">$${currency(e.amount)}</td>
+        <td class="split-rule small" data-label="Split rule">${formatRule(e)}</td>
+        <td class="split-amts" data-label="Split amounts">${formatAmounts(e)}</td>
+        <td class="actions" data-label="Actions">
+          <button class="btn-ghost icon btn-edit" title="Edit" data-id="${e.id}">✎</button>
+          <button class="btn-ghost icon btn-del"  title="Delete" data-id="${e.id}">✕</button>
         </td>`;
       tbody.appendChild(tr);
     });
