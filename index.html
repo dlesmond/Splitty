@@ -27,6 +27,7 @@
 
 <link rel="stylesheet" href="/styles.css">
 
+<script defer src="/balances.js"></script>
 <!-- Load app.js ONCE -->
 <script defer src="/app.js"></script>
   
@@ -126,7 +127,7 @@
       <div class="card balances-card">
         <h2>Balances</h2>
         <div id="balances"></div>
-        <p class="muted small">Paid/Owes include expenses + settlements. Net = Paid &minus; Owes.</p>
+        <p class="muted small">Paid/Owes include expenses. Settled reflects repayments. Net = Paid &minus; Owes + Settled.</p>
         <hr />
         <details id="settleSection">
           <summary>Suggested settle-up</summary>
