@@ -537,9 +537,9 @@
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Owes</span><span class="bal-amt mono">$${currency(owesVal)}</span></div>
         <div class="bal-sep"></div>
-        <div class="bal-row"><span class="label" title="Repayments you made">Settled (out)</span><span class="bal-amt mono neg">$${currency(outVal)}</span></div>
+        <div class="bal-row"><span class="label" title="Repayments you made">Settled (out)</span><span class="bal-amt mono">$${currency(outVal)}</span></div>
         <div class="bal-sep"></div>
-        <div class="bal-row"><span class="label" title="Repayments you received">Settled (in)</span><span class="bal-amt mono pos">$${currency(inVal)}</span></div>
+        <div class="bal-row"><span class="label" title="Repayments you received">Settled (in)</span><span class="bal-amt mono">$${currency(inVal)}</span></div>
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Net</span><span class="bal-amt mono ${n>=0?'pos':'neg'}">${n>=0?'+':'-'}$${currency(Math.abs(n))}</span></div>
       `;
