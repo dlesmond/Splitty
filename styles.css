@@ -197,6 +197,19 @@ details summary{
 #expensesTable tbody tr:nth-child(even){ background: rgba(255,255,255,0.02); }
 #expensesTable tbody tr:hover{ background: rgba(255,255,255,0.05); }
 
+/* expenses table tweaks */
+#expensesTable th, #expensesTable td{padding:6px 8px;font-family:inherit}
+#expensesTable td.amount{font-weight:600;text-align:right;white-space:nowrap}
+#expensesTable td.split-rule{color:var(--muted)}
+#expensesTable td.actions{text-align:right;opacity:0;transition:opacity .2s}
+#expensesTable tr:hover td.actions{opacity:1}
+#expensesTable td.actions .icon{width:20px;height:20px;padding:4px}
+#expensesTable td.split-amts .split-line{display:flex;justify-content:space-between;gap:8px}
+#expensesTable td.split-amts .split-line span:last-child{font-weight:600;text-align:right}
+#expensesTable td .participants .participant{display:inline-flex;align-items:center;gap:4px}
+#expensesTable td .participants .avatar{width:16px;height:16px;border-radius:50%}
+#expensesTable tr.month-header td{background:var(--bg2);font-weight:600;border-bottom:1px solid var(--hairline);padding-top:10px}
+
 /* sticky head */
 .scroll-expenses thead th{position:sticky;top:0;z-index:1;backdrop-filter:blur(4px)}
 
@@ -221,6 +234,7 @@ details summary{
   table#expensesTable td{border:0;display:flex;justify-content:space-between;gap:12px;padding:8px}
   table#expensesTable td::before{content:attr(data-label);color:var(--muted);font-size:12px}
   table#expensesTable td.right{justify-content:flex-end}
+  table#expensesTable td.actions{opacity:1}
   .scroll-expenses{max-height:none}
   .mono{white-space:normal}
 }
