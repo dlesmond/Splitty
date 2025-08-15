@@ -520,13 +520,14 @@
 
   // ---------- render: balances + suggestions ----------
   function computeBalances(){
-    const {net, paid, owed, settled} = calculateAggregates(state.people, state.expenses, state.settlements);
+    const {net, paid, owed, settledOut, settledIn} = calculateAggregates(state.people, state.expenses, state.settlements);
     const wrap = $('#balances'); if(!wrap) return;
     wrap.innerHTML='';
     state.people.forEach(p=>{
       const paidVal = paid[p]||0;
       const owesVal = owed[p]||0;
-      const setVal  = settled[p]||0;
+      const outVal  = settledOut[p]||0;
+      const inVal   = settledIn[p]||0;
       const n = net[p]||0;
       const card = document.createElement('div');
       card.className='balcard';
@@ -536,7 +537,9 @@
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Owes</span><span class="bal-amt mono">$${currency(owesVal)}</span></div>
         <div class="bal-sep"></div>
-        <div class="bal-row"><span class="label">Settled</span><span class="bal-amt mono ${setVal>=0?'pos':'neg'}">${setVal>=0?'+':'-'}$${currency(Math.abs(setVal))}</span></div>
+        <div class="bal-row"><span class="label" title="Repayments you made">Settled (out)</span><span class="bal-amt mono neg">-$${currency(outVal)}</span></div>
+        <div class="bal-sep"></div>
+        <div class="bal-row"><span class="label" title="Repayments you received">Settled (in)</span><span class="bal-amt mono pos">+$${currency(inVal)}</span></div>
         <div class="bal-sep"></div>
         <div class="bal-row"><span class="label">Net</span><span class="bal-amt mono ${n>=0?'pos':'neg'}">${n>=0?'+':'-'}$${currency(Math.abs(n))}</span></div>
       `;
