@@ -291,11 +291,12 @@
 
   function addExactSettlement(from, to, amount, date = null, viaModal=false){
     const when = date || todayISO();
+    const amt = Math.round((Number(amount)||0) * 100) / 100;
     state.settlements.push({
       id: crypto.randomUUID(),
       fromUserId: from,
       toUserId: to,
-      amount,
+      amount: amt,
       date: when
     });
     save(); if(viaModal) closeSettleModal(); renderExpenses(); computeBalances();
@@ -585,8 +586,9 @@
     let i=0,j=0;
     while(i<debtors.length && j<creditors.length){
       const pay=Math.min(debtors[i].amt, creditors[j].amt);
-      txns.push({from:debtors[i].p, to:creditors[j].p, amt:pay});
-      debtors[i].amt-=pay; creditors[j].amt-=pay;
+      const rounded=Math.round(pay*100)/100;
+      txns.push({from:debtors[i].p, to:creditors[j].p, amt:rounded});
+      debtors[i].amt-=rounded; creditors[j].amt-=rounded;
       if(debtors[i].amt<0.005) i++;
       if(creditors[j].amt<0.005) j++;
     }
@@ -602,10 +604,11 @@
     const tbody = document.createElement('tbody');
     txns.forEach(t=>{
       const tr = document.createElement('tr');
+      const amtStr = t.amt.toFixed(2);
       tr.innerHTML = `<td>${t.from}</td><td>${t.to}</td><td class="right">$${currency(t.amt)}</td>
         <td class="right">
-          <button class="btn-ghost use-suggestion" data-from="${t.from}" data-to="${t.to}" data-amt="${t.amt}">Use</button>
-          <button class="btn-ghost pay-suggestion" data-from="${t.from}" data-to="${t.to}" data-amt="${t.amt}">Pay</button>
+          <button class="btn-ghost use-suggestion" data-from="${t.from}" data-to="${t.to}" data-amt="${amtStr}">Use</button>
+          <button class="btn-ghost pay-suggestion" data-from="${t.from}" data-to="${t.to}" data-amt="${amtStr}">Pay</button>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -651,7 +654,7 @@
     const creditor = Object.entries(net).sort((a,b)=>b[1]-a[1])[0]?.[0];
     fromSel.value = prefFrom || debtor || state.people[0] || '';
     toSel.value   = prefTo   || creditor || state.people[1] || '';
-    $('#settleAmount').value = (prefAmt!=null) ? String(prefAmt) : '';
+    $('#settleAmount').value = (prefAmt!=null) ? Number(prefAmt).toFixed(2) : '';
     $('#settleDate').value = '';
     updateSettlePreview();
     $('#settleModal').classList.remove('hidden');
