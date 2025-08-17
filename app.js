@@ -790,7 +790,7 @@
         }
       });
       expCont.addEventListener('deleteExpense', (e) => {
-        deleteExpense(e.detail.id);
+        confirmDelete(e.detail.id);
       });
     }
 
