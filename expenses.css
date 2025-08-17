@@ -1,0 +1,28 @@
+.table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.table th, .table td { padding: 10px 12px; vertical-align: middle; }
+.table thead th { position: sticky; top: 0; backdrop-filter: blur(4px); z-index:2; }
+.table tr:nth-child(even) { background: rgba(255,255,255,0.03); }
+.table tbody tr:hover { background: rgba(255,255,255,0.06); }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.table .date { width:100px; }
+.table .people { width:140px; }
+.table .amount { width:110px; }
+.table .splitRule { width:80px; }
+.table .perPerson { width:160px; }
+.monthHeader { position: sticky; top:40px; padding:6px 12px; font-weight:600; background: rgba(255,255,255,0.04); border-top:1px solid rgba(255,255,255,0.08); border-bottom:1px solid rgba(255,255,255,0.08); z-index:1; }
+.monthHeader th { text-align:left; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.small { opacity: .7; font-size: .85em; }
+.expenses-filters { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.expenses-filters input, .expenses-filters select { padding:6px; }
+.details { background: rgba(255,255,255,0.02); }
+.details .actions { margin-top:8px; display:flex; gap:8px; }
+.details button { padding:4px 8px; }
+@media (max-width:640px) {
+  .table .people { display:none; }
+  .table .desc.truncate { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .table td.amount, .table td.perPerson { display:block; width:100%; }
+  .table tr { display:block; }
+  .table td { display:block; width:100%; }
+  .monthHeader { top:88px; }
+}

@@ -47,6 +47,7 @@
   const GROUP_ID = 'couple';
   let state = safeJSON(localStorage.getItem('spl-lite')) ?? { people: [], expenses: [], settlements: [] };
   if (!state.settlements) state.settlements = [];
+  window.state = state;
 
   // ---------- save status pill ----------
   let _saveTimer = null;
@@ -463,8 +464,8 @@
     if (yes) deleteExpense(id);
   }
 
-  // ---------- render: expenses (newest first) ----------
-  function renderExpenses(){
+  // ---------- render: expenses (legacy table, unused) ----------
+  function renderExpensesLegacy(){
     function formatRule(e){
       const map={
         settlement:'Settlement',
@@ -541,6 +542,10 @@
         </td>`;
       tbody.appendChild(tr);
     });
+  }
+
+  function renderExpenses(){
+    window.renderExpenses?.();
   }
 
   // ---------- render: balances + suggestions ----------
@@ -773,6 +778,22 @@
       const btnEdit=e.target.closest?.('.btn-edit'); if(btnEdit){ openEditModal(btnEdit.dataset.id); }
     });
 
+    // Inline table events from expenses.js
+    const expCont = document.getElementById('expensesContainer');
+    if (expCont) {
+      expCont.addEventListener('updateExpense', (e) => {
+        const { id, patch } = e.detail || {};
+        const idx = state.expenses.findIndex(x => x.id === id);
+        if (idx >= 0) {
+          state.expenses[idx] = { ...state.expenses[idx], ...patch };
+          save(); renderExpenses(); computeBalances();
+        }
+      });
+      expCont.addEventListener('deleteExpense', (e) => {
+        confirmDelete(e.detail.id);
+      });
+    }
+
     // Edit modal
     $('#editCancel')?.addEventListener('click', closeEditModal);
     $('#editSave')?.addEventListener('click', saveEdit);
@@ -838,6 +859,7 @@
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
     state = { people: [], expenses: [], settlements: [] };
+    window.state = state;
     localStorage.removeItem('spl-lite');
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
     // Reset some form fields for a fresh look
