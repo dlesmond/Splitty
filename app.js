@@ -47,6 +47,7 @@
   const GROUP_ID = 'couple';
   let state = safeJSON(localStorage.getItem('spl-lite')) ?? { people: [], expenses: [], settlements: [] };
   if (!state.settlements) state.settlements = [];
+  window.state = state;
 
   // ---------- save status pill ----------
   let _saveTimer = null;
@@ -463,8 +464,8 @@
     if (yes) deleteExpense(id);
   }
 
-  // ---------- render: expenses (newest first) ----------
-  function renderExpenses(){
+  // ---------- render: expenses (legacy table, unused) ----------
+  function renderExpensesLegacy(){
     function formatRule(e){
       const map={
         settlement:'Settlement',
@@ -541,6 +542,10 @@
         </td>`;
       tbody.appendChild(tr);
     });
+  }
+
+  function renderExpenses(){
+    window.renderExpenses?.();
   }
 
   // ---------- render: balances + suggestions ----------
@@ -854,6 +859,7 @@
   function clearUIOnSignOut(){
     // Clear in-memory + local cache (do NOT touch Firestore)
     state = { people: [], expenses: [], settlements: [] };
+    window.state = state;
     localStorage.removeItem('spl-lite');
     renderPeople(); renderExpenses(); computeBalances(); updateSplitUI(); renderUserList();
     // Reset some form fields for a fresh look

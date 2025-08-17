@@ -15,7 +15,34 @@ function renderExpenses() {
   const container = document.getElementById('expensesContainer');
   if (!container) return;
   expState.container = container;
-  expState.expenses = (window.state?.expenses || []).slice();
+  const rawExp = window.state?.expenses || [];
+  const rawSettle = window.state?.settlements || [];
+  expState.expenses = [
+    ...rawExp.map(e => ({
+      id: e.id,
+      date: e.date,
+      description: e.desc || e.description || '',
+      amount: e.amount,
+      payer: e.payer,
+      splitRule: e.splitType === 'percent' ? 'percent' : (e.splitType === 'equal' ? 'equal' : 'custom'),
+      participants: (e.participants || []).map(name => ({ name, share: e.shares?.[name] || 0 })),
+      createdBy: e.createdBy,
+      notes: e.notes,
+      receiptUrl: e.receiptUrl
+    })),
+    ...rawSettle.map(s => ({
+      id: s.id,
+      date: s.date,
+      description: `Settle up: ${s.fromUserId} → ${s.toUserId}`,
+      amount: s.amount,
+      payer: s.fromUserId,
+      splitRule: 'custom',
+      participants: [
+        { name: s.fromUserId, share: -s.amount },
+        { name: s.toUserId,   share: s.amount }
+      ]
+    }))
+  ];
   container.innerHTML = '';
 
   const filtersBar = document.createElement('div');
@@ -66,7 +93,7 @@ function renderExpenses() {
   filterInputs.from.addEventListener('change', debounced);
   filterInputs.to.addEventListener('change', debounced);
 
-  render();
+  setFilters(expState.filters);
 }
 
 function setFilters(f) {
