@@ -773,6 +773,22 @@
       const btnEdit=e.target.closest?.('.btn-edit'); if(btnEdit){ openEditModal(btnEdit.dataset.id); }
     });
 
+    // Inline table events from expenses.js
+    const expCont = document.getElementById('expensesContainer');
+    if (expCont) {
+      expCont.addEventListener('updateExpense', (e) => {
+        const { id, patch } = e.detail || {};
+        const idx = state.expenses.findIndex(x => x.id === id);
+        if (idx >= 0) {
+          state.expenses[idx] = { ...state.expenses[idx], ...patch };
+          save(); renderExpenses(); computeBalances();
+        }
+      });
+      expCont.addEventListener('deleteExpense', (e) => {
+        deleteExpense(e.detail.id);
+      });
+    }
+
     // Edit modal
     $('#editCancel')?.addEventListener('click', closeEditModal);
     $('#editSave')?.addEventListener('click', saveEdit);

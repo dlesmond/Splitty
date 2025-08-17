@@ -1,6 +1,7 @@
 const currency = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' });
 
-const state = {
+// local state for table rendering and filters
+const expState = {
   expenses: [],
   filters: { q: '', payer: 'All', from: '', to: '' },
   container: null,
@@ -10,9 +11,11 @@ const state = {
 
 const filterInputs = {};
 
-function renderExpenses(container, expenses) {
-  state.container = container;
-  state.expenses = expenses.slice();
+function renderExpenses() {
+  const container = document.getElementById('expensesContainer');
+  if (!container) return;
+  expState.container = container;
+  expState.expenses = (window.state?.expenses || []).slice();
   container.innerHTML = '';
 
   const filtersBar = document.createElement('div');
@@ -31,7 +34,7 @@ function renderExpenses(container, expenses) {
   filterInputs.to = filtersBar.querySelector('.filter-to');
 
   // populate payers
-  const payers = Array.from(new Set(expenses.map(e => e.payer))).sort();
+  const payers = Array.from(new Set(expState.expenses.map(e => e.payer))).sort();
   payers.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
@@ -55,7 +58,7 @@ function renderExpenses(container, expenses) {
     <tbody></tbody>
   `;
   container.appendChild(table);
-  state.tbody = table.querySelector('tbody');
+  expState.tbody = table.querySelector('tbody');
 
   const debounced = debounce(applyFilters, 250);
   filterInputs.q.addEventListener('input', debounced);
@@ -67,31 +70,31 @@ function renderExpenses(container, expenses) {
 }
 
 function setFilters(f) {
-  Object.assign(state.filters, f);
-  if (filterInputs.q) filterInputs.q.value = state.filters.q || '';
-  if (filterInputs.payer) filterInputs.payer.value = state.filters.payer || 'All';
-  if (filterInputs.from) filterInputs.from.value = state.filters.from || '';
-  if (filterInputs.to) filterInputs.to.value = state.filters.to || '';
+  Object.assign(expState.filters, f);
+  if (filterInputs.q) filterInputs.q.value = expState.filters.q || '';
+  if (filterInputs.payer) filterInputs.payer.value = expState.filters.payer || 'All';
+  if (filterInputs.from) filterInputs.from.value = expState.filters.from || '';
+  if (filterInputs.to) filterInputs.to.value = expState.filters.to || '';
   render();
 }
 
 function applyFilters() {
-  state.filters.q = filterInputs.q.value;
-  state.filters.payer = filterInputs.payer.value;
-  state.filters.from = filterInputs.from.value;
-  state.filters.to = filterInputs.to.value;
+  expState.filters.q = filterInputs.q.value;
+  expState.filters.payer = filterInputs.payer.value;
+  expState.filters.from = filterInputs.from.value;
+  expState.filters.to = filterInputs.to.value;
   render();
 }
 
 function render() {
-  const tbody = state.tbody;
+  const tbody = expState.tbody;
   tbody.innerHTML = '';
 
-  const filtered = state.expenses.filter(e => {
-    if (state.filters.q && !e.description.toLowerCase().includes(state.filters.q.toLowerCase())) return false;
-    if (state.filters.payer !== 'All' && e.payer !== state.filters.payer) return false;
-    if (state.filters.from && e.date < state.filters.from) return false;
-    if (state.filters.to && e.date > state.filters.to) return false;
+  const filtered = expState.expenses.filter(e => {
+    if (expState.filters.q && !e.description.toLowerCase().includes(expState.filters.q.toLowerCase())) return false;
+    if (expState.filters.payer !== 'All' && e.payer !== expState.filters.payer) return false;
+    if (expState.filters.from && e.date < expState.filters.from) return false;
+    if (expState.filters.to && e.date > expState.filters.to) return false;
     return true;
   }).sort((a,b) => b.date.localeCompare(a.date));
 
@@ -126,7 +129,7 @@ function render() {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(exp.id); }
     });
     tbody.appendChild(tr);
-    if (state.expanded.has(exp.id)) {
+    if (expState.expanded.has(exp.id)) {
       tbody.appendChild(renderDetailsRow(exp));
     }
   });
@@ -151,13 +154,13 @@ function renderDetailsRow(exp) {
   });
   td.querySelector('.btn-delete').addEventListener('click', e => {
     e.stopPropagation();
-    state.container.dispatchEvent(new CustomEvent('deleteExpense', { detail: { id: exp.id } }));
+    expState.container.dispatchEvent(new CustomEvent('deleteExpense', { detail: { id: exp.id } }));
   });
   return tr;
 }
 
 function startEdit(id) {
-  const tr = state.tbody.querySelector(`tr.expense-row[data-id="${id}"]`);
+  const tr = expState.tbody.querySelector(`tr.expense-row[data-id="${id}"]`);
   if (!tr) return;
   const descCell = tr.querySelector('.desc');
   const amountCell = tr.querySelector('.amount');
@@ -184,7 +187,7 @@ function startEdit(id) {
       descCell.textContent = patch.description;
       descCell.title = patch.description;
       amountCell.textContent = currency.format(patch.amount);
-      state.container.dispatchEvent(new CustomEvent('updateExpense', { detail: { id, patch } }));
+      expState.container.dispatchEvent(new CustomEvent('updateExpense', { detail: { id, patch } }));
     } else {
       descCell.textContent = origDesc;
       descCell.title = origDesc;
@@ -204,7 +207,7 @@ function startEdit(id) {
 }
 
 function toggleRow(id) {
-  if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+  if (expState.expanded.has(id)) expState.expanded.delete(id); else expState.expanded.add(id);
   render();
 }
 
